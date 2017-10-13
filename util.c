@@ -292,14 +292,14 @@ shell_command(const char *fmt, ...)
 
     rc = system(buf);
     if (rc == -1) {
-        printf("exec %s failed (%d)",  buf, errno);
+        printf("exec %s failed (%d)\n",  buf, errno);
     }
     else {
         exit_status = 0;
         if (WIFEXITED(rc)) {
             exit_status = WEXITSTATUS(rc);
         }
-        printf("exec %s success. exit status %d",
+        printf("exec %s success. exit status %d\n",
                buf, exit_status);
         rc = exit_status;
     }

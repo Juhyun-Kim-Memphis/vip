@@ -138,7 +138,7 @@ int  tbcm_vip_alias(char *vip_str)
     uint32_t vip;
 
     if( vip_info.flag_init != true ) {
-        printf("VIP was not initialized yet.");
+        printf("VIP was not initialized yet.\n");
         return FAILURE;
     }
 
@@ -146,7 +146,7 @@ int  tbcm_vip_alias(char *vip_str)
     if ( (idx = get_unique_interface(vip_info.dev_pub,
                                      unique_device, NULL, NULL,
                                      vip_str, false, true)) < 0) {
-        printf("can't find unique device name for %s", vip_info.dev_pub);
+        printf("can't find unique device name for %s\n", vip_info.dev_pub);
         return FAILURE;
     }
 
@@ -159,9 +159,9 @@ int  tbcm_vip_alias(char *vip_str)
      /* CM guard에게 먼저 VIP 정보를 보내준 후에 실제 vip alias 시도 */
      rc = vip_add_internal(unique_device, vip_str, idx);
      if ( rc == SUCCESS)
-         printf("VIP %s alias success.", vip_str);
+         printf("VIP %s alias success.\n", vip_str);
      else {
-         printf("VIP %s alias failure.", vip_str);
+         printf("VIP %s alias failure.\n", vip_str);
          vip_info.vips[idx] = 0;
          vip_info.count    -= 1;
      }
@@ -177,12 +177,12 @@ tbcm_vip_release(char *vip_str, tb_bool_t use_retention)
     char unique_device[IF_NAMESIZE];
 
     if (vip_info.flag_init != true ) {
-        printf("VIP was not initialized yet.");
+        printf("VIP was not initialized yet.\n");
         return FAILURE;
     }
 
     if (vip_info.count <= 0 ) {
-        printf("no VIP aliased." );
+        printf("no VIP aliased.\n" );
         return FAILURE;
     }
 
@@ -204,19 +204,19 @@ tbcm_vip_release(char *vip_str, tb_bool_t use_retention)
     /* Step II) VIP를 NIC에서 제거한다. */
     if (tbcm_vip_check_validity(vip_str, false) == SUCCESS) {
         if (remove_ip_from_nic(unique_device, vip) < 0) {
-            printf("VIP %s release failure.", vip_str);
+            printf("VIP %s release failure.\n", vip_str);
             return FAILURE;
         }
     }
     else {
         if (remove_ip_from_nic(unique_device, vip) < 0)
-            printf("VIP %s was removed already.", vip_str);
+            printf("VIP %s was removed already.\n", vip_str);
     }
 
     vip_info.vips[i] = 0;
     vip_info.count  -= 1;
 
-    printf("VIP %s release success.", vip_str);
+    printf("VIP %s release success.\n", vip_str);
 
     return SUCCESS;
 }
@@ -350,7 +350,7 @@ int vip_add_internal(char *unique_device, char *vip_str, int idx)
     /* Step II) VIP를 NIC에 aliasing한다. */
     if (add_ip_to_nic(unique_device, vip,
                       vip_info.netmask, vip_info.broadcast) != SUCCESS ) {
-        printf("IP %s aliasing failure", vip_str);
+        printf("IP %s aliasing failure\n", vip_str);
         return FAILURE;
     }
 
@@ -370,14 +370,14 @@ int tbcm_vip_check_validity(char *vip_str, tb_bool_t logging)
 
     if (vip_info.flag_init != true ) {
         if (logging)
-            printf("VIP was not initialized yet.");
+            printf("VIP was not initialized yet.\n");
         return FAILURE;
     }
 
     if ( (idx = get_unique_interface(vip_info.dev_pub, NULL, NULL, NULL,
                                      vip_str, true, logging)) < 0 ) {
         if (logging)
-            printf("can't find VIP %s at %s",
+            printf("can't find VIP %s at %s\n",
                       vip_str, vip_info.dev_pub);
         return FAILURE;
     }
