@@ -1,15 +1,21 @@
 #include "util.h"
 
 #define VIP_IDX_MAP_SIZE    VIP_ALIAS_MAX
+#define VIP_ARP_COUNT           5
+#define VIP_ARP_INTERVAL        400000  /* micro-seconds */
 
 int tbcm_vip_init(char *device, char *vip_str, char *netmask_str, char *broadcast_str);
 int tbcm_vip_alias(char *vip_str);
+int tbcm_vip_release(char *vip_str, tb_bool_t use_retention);
 
-static int get_unique_interface(const char *device, char *unique_device,
+int get_unique_interface(const char *device, char *unique_device,
                                 char *physical_device, char *loop_back,
                                 char* remove_addr, tb_bool_t chk_validity,
                                 tb_bool_t logging);
-static int vip_add_internal(char *unique_device, char *vip_str, int idx);
+int vip_add_internal(char *unique_device, char *vip_str, int idx);
+int tbcm_vip_check_validity(char *vip_str, tb_bool_t logging);
+
+void get_user_input(char *prompt_message);
 
 tbcm_vip_t vip_info;
 
@@ -35,10 +41,18 @@ int main(int argc, char const *argv[])
 
     printf("vip test started.\n");
 
-    // vip_info initialize
     tbcm_vip_init(device, vip, netmask, broadcast);
-
     print_vip_info(&vip_info);
+
+    get_user_input("type anything to alias ip");
+
+    tbcm_vip_alias(vip);
+
+    get_user_input("type anything to release ip");
+
+    tbcm_vip_release(vip, false);
+
+    get_user_input("type anything to end this test");
 
     printf("\nvip test ended\n");
     return 0;
@@ -153,6 +167,58 @@ int  tbcm_vip_alias(char *vip_str)
      }
 
     return rc;
+}
+
+int
+tbcm_vip_release(char *vip_str, tb_bool_t use_retention)
+{
+    int  i;
+    uint32_t vip = 0;
+    char unique_device[IF_NAMESIZE];
+
+    if (vip_info.flag_init != true ) {
+        printf("VIP was not initialized yet.");
+        return FAILURE;
+    }
+
+    if (vip_info.count <= 0 ) {
+        printf("no VIP aliased." );
+        return FAILURE;
+    }
+
+    inet_pton(AF_INET, vip_str, &vip);  /* FIXME....no error handling? */
+
+    /* Step I)  VIP를 alias한적이 있는지 확인하고, index를 찾는다. */
+    for (i = 0; i < VIP_ALIAS_MAX; i++) {
+        if (vip_info.vips[i] && vip_info.vips[i] == vip) {
+            sprintf(unique_device, "%s:%d", vip_info.dev_pub, i);
+            break;
+        }
+    }
+
+    if (i == VIP_ALIAS_MAX) {
+        printf("VIP %s was not found.", vip_str);
+        return FAILURE;
+    }
+
+    /* Step II) VIP를 NIC에서 제거한다. */
+    if (tbcm_vip_check_validity(vip_str, false) == SUCCESS) {
+        if (remove_ip_from_nic(unique_device, vip) < 0) {
+            printf("VIP %s release failure.", vip_str);
+            return FAILURE;
+        }
+    }
+    else {
+        if (remove_ip_from_nic(unique_device, vip) < 0)
+            printf("VIP %s was removed already.", vip_str);
+    }
+
+    vip_info.vips[i] = 0;
+    vip_info.count  -= 1;
+
+    printf("VIP %s release success.", vip_str);
+
+    return SUCCESS;
 }
 
 int get_unique_interface(const char *device, char *unique_device,
@@ -275,7 +341,7 @@ int get_unique_interface(const char *device, char *unique_device,
     return retval;
 }
 
-static int vip_add_internal(char *unique_device, char *vip_str, int idx)
+int vip_add_internal(char *unique_device, char *vip_str, int idx)
 {
     uint32_t vip;
 
@@ -289,11 +355,32 @@ static int vip_add_internal(char *unique_device, char *vip_str, int idx)
     }
 
     /* Step III) Gratuitous ARP를 날린다. */
-//    if( send_gratuitous_arp(vip_info.dev_pub, vip,
-//                            VIP_ARP_COUNT, VIP_ARP_INTERVAL) != SUCCESS ) {
-//        remove_ip_from_nic(unique_device, vip);
-//        return FAILURE;
-//    }
+    if( send_gratuitous_arp(vip_info.dev_pub, vip,
+                            VIP_ARP_COUNT, VIP_ARP_INTERVAL) != SUCCESS ) {
+        remove_ip_from_nic(unique_device, vip);
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
+int tbcm_vip_check_validity(char *vip_str, tb_bool_t logging)
+{
+    int idx;
+
+    if (vip_info.flag_init != true ) {
+        if (logging)
+            printf("VIP was not initialized yet.");
+        return FAILURE;
+    }
+
+    if ( (idx = get_unique_interface(vip_info.dev_pub, NULL, NULL, NULL,
+                                     vip_str, true, logging)) < 0 ) {
+        if (logging)
+            printf("can't find VIP %s at %s",
+                      vip_str, vip_info.dev_pub);
+        return FAILURE;
+    }
 
     return SUCCESS;
 }

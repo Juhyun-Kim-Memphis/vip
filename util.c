@@ -85,9 +85,8 @@ remove_ip_from_nic(char *device, uint32_t vip)
  * the neighboring machines about the change in MAC for the IP.  Machines
  * receiving the ARP packet then update their ARP tables with the new MAC.
  */
-static int
-send_gratuitous_arp(char *device, uint32_t vip,
-                    u_int count, u_long interval)
+int send_gratuitous_arp(char *device, uint32_t vip,
+                        u_int count, u_long interval)
 {
     int         rc;
     u_int       i;
@@ -99,47 +98,184 @@ send_gratuitous_arp(char *device, uint32_t vip,
     libnet_context = libnet_init(LIBNET_LINK_ADV,   /* injection type */
                                  device,            /* network interface */
                                  errbuf);           /* errbuf */
-//    if (!libnet_context) {
-//        TB_CM_LOG( LOG_ESSENTIAL,"libnet_init(): %s", errbuf);
-//        return FAILURE;
-//    }
-//
-//    /* get HW address */
-//    if (!(e = libnet_get_hwaddr(libnet_context))) {
-//        TB_CM_LOG( LOG_ESSENTIAL,
-//                   "libnet_get_hwaddr(): %s", libnet_geterror(libnet_context));
-//        return FAILURE;
-//    }
-//
-//    TB_CM_LOG(LOG_DEFAULT, "sending gratuitous arp packets via %s (MAC:%s)",
-//              device, macaddr2str(e->ether_addr_octet, macaddr_str));
-//
-//    /* NOTE:
-//     * We need to send both a broadcast ARP request as well as the ARP response
-//     * we were already sending.  All the interesting research work for this fix
-//     * was done by Masaki Hasegawa <masaki-h@pp.iij4u.or.jp> and his colleagues.
-//     */
-//    /* Note that some devices will respond to the gratuitous request and some
-//     * will respond to the gratuitous reply. If one is trying to write software
-//     * for moving IP addresses around that works with all routers, switches and
-//     * IP stacks, it is best to send both the request and the reply
-//     */
-//    for (i = 0; i < count; ++i) {
-//        rc = send_arp(libnet_context, vip, e->ether_addr_octet, ARPOP_REQUEST);
-//        if (rc < 0)
-//            break;
-//        TB_CM_LOG(LOG_OPTIONAL, "An arp request sent (%d bytes)", rc);
-//
-//        USLEEP(interval);
-//
-//        rc = send_arp(libnet_context, vip, e->ether_addr_octet, ARPOP_REPLY);
-//        if (rc < 0)
-//            break;
-//        TB_CM_LOG(LOG_OPTIONAL, "An arp reply sent (%d bytes)", rc);
-//    }
-//
-//    libnet_destroy(libnet_context);
-//    return SUCCESS;
+    if (!libnet_context) {
+        printf("libnet_init(): %s", errbuf);
+        return FAILURE;
+    }
+
+    /* get HW address */
+    if (!(e = libnet_get_hwaddr(libnet_context))) {
+        printf("libnet_get_hwaddr(): %s", libnet_geterror(libnet_context));
+        return FAILURE;
+    }
+
+    printf("sending gratuitous arp packets via %s (MAC:%s)",
+            device, macaddr2str(e->ether_addr_octet, macaddr_str));
+
+    /* NOTE:
+     * We need to send both a broadcast ARP request as well as the ARP response
+     * we were already sending.  All the interesting research work for this fix
+     * was done by Masaki Hasegawa <masaki-h@pp.iij4u.or.jp> and his colleagues.
+     */
+    /* Note that some devices will respond to the gratuitous request and some
+     * will respond to the gratuitous reply. If one is trying to write software
+     * for moving IP addresses around that works with all routers, switches and
+     * IP stacks, it is best to send both the request and the reply
+     */
+    for (i = 0; i < count; ++i) {
+        rc = send_arp(libnet_context, vip, e->ether_addr_octet, ARPOP_REQUEST);
+        if (rc < 0)
+            break;
+        printf("An arp request sent (%d bytes)", rc);
+
+        usleep(interval);
+
+        rc = send_arp(libnet_context, vip, e->ether_addr_octet, ARPOP_REPLY);
+        if (rc < 0)
+            break;
+        printf("An arp reply sent (%d bytes)", rc);
+    }
+
+    libnet_destroy(libnet_context);
+    return SUCCESS;
+}
+
+/* NOTE:
+ * 표준에 따르면 ARP request packet의 target mac address로 00:00:00:00:00:00를
+ * 쓰는게 맞지만, 예전 시스템(?)의 경우 ff:ff:ff:ff:ff:ff를 써야 할 수도 있다.
+ * 아래 internet document들 참고.
+ */
+/* I gather Solaris uses ff:ff:ff:ff:ff:ff in its standard ARP requests
+ * and most other OSes use 00:00:00:00:00:00 instead.
+ */
+/* RFC 3927, which is based on Gratuitous ARP, specifies 00:00:00:00:00:00
+ * for the target MAC. However many simple TCP/IP stacks have an API
+ * which permits the specification of only one MAC value,
+ * and when the Ethernet Destination field is set to 'broadcast',
+ * the ARP target is also set 'broadcast'.  Note: Normal ARP requests have
+ * the same value in the ARP Packet Target MAC address
+ * as in the Ethernet Destination field.
+ */
+/*
+ * Notes on send_arp() behaviour. Horms, 15th June 2004
+ *
+ * 1. Target Hardware Address
+ *    (In the ARP portion of the packet)
+ *
+ *    a) ARP Reply
+ *
+ *       Set to the MAC address we want associated with the VIP,
+ *       as per RFC2002 (4.6).
+ *
+ *       Previously set to ff:ff:ff:ff:ff:ff
+ *
+ *    b) ARP Request
+ *
+ *       Set to 00:00:00:00:00:00. According to RFC2002 (4.6)
+ *       this value is not used in an ARP request, so the value should
+ *       not matter. However, I observed that typically (always?) this value
+ *       is set to 00:00:00:00:00:00. It seems harmless enough to follow
+ *       this trend.
+ *
+ *       Previously set to ff:ff:ff:ff:ff:ff
+ *
+ *  2. Source Hardware Address
+ *     (Ethernet Header, not in the ARP portion of the packet)
+ *
+ *     Set to the MAC address of the interface that the packet is being
+ *     sent to. Actually, due to the way that send_arp is called this would
+ *     usually (always?) be the case anyway. Although this value should not
+ *     really matter, it seems sensible to set the source address to where
+ *     the packet is really coming from.  The other obvious choice would be
+ *     the MAC address that is being associated for the VIP. Which was the
+ *     previous values.  Again, these are typically the same thing.
+ *
+ *     Previously set to MAC address being associated with the VIP
+ */
+int send_arp(libnet_t *l, u_long ip, u_char macaddr[6], u_short arptype)
+{
+
+    int n;
+    u_char *target_mac;
+    u_char bcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    u_char zero_mac [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    libnet_ptag_t pt;
+    uint8_t  *packet;
+    uint32_t  packet_sz;
+
+    if (arptype == ARPOP_REQUEST) {
+        target_mac = zero_mac;
+    }
+    else if (arptype == ARPOP_REPLY) {
+        target_mac = macaddr;
+    }
+    else {
+        printf("invalid arp type");
+        return FAILURE;
+    }
+
+    /*
+     *  Build the packet, remmebering that order IS important.  We must
+     *  build the packet from lowest protocol type on up as it would
+     *  appear on the wire.  So for our ARP packet:
+     *
+     *  -------------------------------------------
+     *  |  Ethernet   |           ARP             |
+     *  -------------------------------------------
+     *         ^                     ^
+     *         |------------------   |
+     *  libnet_build_ethernet()--|   |
+     *                               |
+     *  libnet_build_arp()-----------|
+     */
+
+    /*
+     *  ARP header
+     */
+    pt = libnet_build_arp(ARPHRD_ETHER,     /* hardware address type */
+                          ETHERTYPE_IP,     /* protocol address type */
+                          6,                /* Hardware address length */
+                          4,                /* protocol address length */
+                          arptype,          /* ARP operation type */
+                          macaddr,          /* sender Hardware address */
+                          (u_char *)&ip,    /* sender protocol address */
+                          target_mac,       /* target hardware address */
+                          (u_char *)&ip,    /* target protocol address */
+                          NULL,             /* payload */
+                          0,                /* length of payload */
+                          l,                /* libnet context pointer */
+                          0 );              /* packet id */
+    if (pt < 0) {
+        printf("libnet_build_arp(): %s", libnet_geterror(l));
+        return FAILURE;
+    }
+
+    /*
+     * Ethernet header
+     */
+    pt = libnet_autobuild_ethernet(bcast_mac, ETHERTYPE_ARP, l);
+    if (pt < 0) {
+        printf("libnet_autobuild_ethernet(): %s", libnet_geterror(l));
+        return FAILURE;
+    }
+
+
+    if (libnet_adv_cull_packet(l, &packet, &packet_sz) < 0) {
+        printf("libnet_adv_cull_packet(): %s", libnet_geterror(l));
+        return FAILURE;
+    }
+    else {
+        libnet_adv_free_packet(l, packet);
+    }
+
+
+    if ( (n = libnet_write(l)) < 0) {
+        printf("libnet_write(): %s", libnet_geterror(l));
+        return FAILURE;
+    }
+
+    libnet_clear_packet(l);
+    return (n);
 }
 
 int
@@ -187,6 +323,14 @@ char *iptos(uint32_t in)
     return output[which];
 }
 
+char *macaddr2str(const u_char *macaddr, char *str) {
+    sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X",
+            macaddr[0], macaddr[1], macaddr[2],
+            macaddr[3], macaddr[4], macaddr[5]);
+
+    return str;
+}
+
 void print_vip_info(tbcm_vip_t *v) {
     printf("\n\nprint_vip_info result!!\n");
     printf("flag_init: %d\n", v->flag_init);
@@ -206,3 +350,11 @@ void print_vip_info(tbcm_vip_t *v) {
     printf("count: %d\n", v->count);
 }
 
+void get_user_input(char *prompt_message) {
+    int c;
+
+    printf("%s \n", prompt_message);
+    c = getchar();
+    putchar(c);
+    printf("\n");
+}

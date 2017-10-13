@@ -65,8 +65,14 @@ typedef struct tbcm_node_s {
 
 int add_ip_to_nic(char *device, uint32_t vip, uint32_t netmask, uint32_t broadcast);
 int remove_ip_from_nic(char *device, uint32_t vip);
+
+int send_gratuitous_arp(char *device, uint32_t vip, u_int count, u_long interval);
+int send_arp(libnet_t *l, u_long ip, u_char macaddr[6], u_short arptype);
+
 char *iptos(uint32_t in);
 int shell_command(const char *fmt, ...);
+char * macaddr2str(const u_char *macaddr, char *str);
 void print_vip_info(tbcm_vip_t *vip_info);
+void get_user_input(char *prompt_message);
 
 #endif //VIP_UTIL_H
