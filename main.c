@@ -32,7 +32,7 @@ int main(int argc, char const *argv[])
 
     strcpy(device, "eth0");
     strcpy(vip, "192.1.13.193");
-    // 192.1.13.193 ohhyun
+    // 192.1.13.193 ohhyun 
     // 192.1.13.214 juhyun
     strcpy(netmask, "255.255.0.0");
     strcpy(broadcast, "192.1.255.255");
