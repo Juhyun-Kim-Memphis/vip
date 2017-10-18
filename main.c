@@ -47,6 +47,11 @@ int main(int argc, char const *argv[])
         printf("ERROR at shell_command");
 
 
+
+    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
+        printf("ERROR at shell_command");
+
+
     /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
 
