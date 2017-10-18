@@ -25,6 +25,10 @@ int main(int argc, char const *argv[])
     char vip[IP_LEN];
     char netmask[IP_LEN];
     char broadcast[IP_LEN];
+
+    FILE *popen_fp;
+    char    out_line[1024];
+
     memset(device, 0, sizeof(device));
     memset(vip, 0, sizeof(vip));
     memset(netmask, 0, sizeof(netmask));
@@ -43,13 +47,24 @@ int main(int argc, char const *argv[])
 
     get_user_input("type something.");
 
-    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
-        printf("ERROR at shell_command");
+//    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
+//        printf("ERROR at shell_command");
+
+    popen_fp = shell_command_as_pipe("ls");
+    if(popen_fp == NULL){
+        printf("error in popen \n");
+        exit(1);
+    } else {
+        /* parse */
+        int i = 0;
+        printf("result of aws_vip_alias.sh\n");
+        while (fgets(out_line, sizeof(out_line), popen_fp) != NULL) {
+            printf("%d:%s", i++, out_line);
+        }
+        pclose(popen_fp);
+    }
 
 
-
-    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
-        printf("ERROR at shell_command");
 
 
     /*tbcm_vip_init(device, vip, netmask, broadcast);

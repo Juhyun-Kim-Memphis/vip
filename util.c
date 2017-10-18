@@ -308,6 +308,24 @@ shell_command(const char *fmt, ...)
     return rc;
 }
 
+FILE *shell_command_as_pipe(const char *fmt, ...){
+    va_list ap;
+    char    cmd[1024];
+    FILE *fp;
+
+    va_start(ap, fmt);
+    vsprintf(cmd, fmt, ap);
+    printf("start exec %s\n", cmd);
+
+    fp = popen(cmd, "r");
+    if (fp == NULL) {
+        fprintf(stderr, "popen() fail : %s, errno=%d\n", cmd, errno);
+    }
+
+    va_end(ap);
+    return fp;
+}
+
 /* from tcptraceroute */
 #define IPTOSBUFFERS    12
 
