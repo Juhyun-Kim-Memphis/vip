@@ -15,3 +15,4 @@ output=$(aws ec2 describe-network-interfaces --query $query_stmt)
 
 echo $output
 
+aws ec2 assign-private-ip-addresses --network-interface-id $output --private-ip-addresses ${1}

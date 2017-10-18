@@ -50,7 +50,7 @@ int main(int argc, char const *argv[])
 //    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
 //        printf("ERROR at shell_command");
 
-    popen_fp = shell_command_as_pipe("ls");
+    popen_fp = shell_command_as_pipe("aws_vip_alias.sh", "172.31.29.200");
     if(popen_fp == NULL){
         printf("error in popen \n");
         exit(1);
@@ -64,7 +64,7 @@ int main(int argc, char const *argv[])
         pclose(popen_fp);
     }
 
-
+    get_user_input("type anything to quit");
 
 
     /*tbcm_vip_init(device, vip, netmask, broadcast);
