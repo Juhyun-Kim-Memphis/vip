@@ -41,7 +41,13 @@ int main(int argc, char const *argv[])
 
     printf("vip test started.\n");
 
-    tbcm_vip_init(device, vip, netmask, broadcast);
+    get_user_input("type something.");
+
+    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
+        printf("ERROR at shell_command");
+
+
+    /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
 
     get_user_input("type anything to alias ip");
@@ -52,7 +58,7 @@ int main(int argc, char const *argv[])
 
     tbcm_vip_release(vip, false);
 
-    get_user_input("type anything to end this test");
+    get_user_input("type anything to end this test");*/
 
     printf("\nvip test ended\n");
     return 0;
