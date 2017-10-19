@@ -31,7 +31,9 @@ int main(int argc, char const *argv[])
     char    assign_priv_ipaddr_stmt[1024];
     char    priv_ip[128];
     char    eip[128];
-    strcpy(priv_ip, "172.31.29.77");
+
+    FILE *testfp;
+
     strcpy(eip, "13.115.176.52");
 
     memset(device, 0, sizeof(device));
@@ -73,14 +75,18 @@ int main(int argc, char const *argv[])
 
     printf("net if id: [%s]\n", out_line);
 
+    print_all_private_ip_in_subnet();
+
+    strcpy(priv_ip, "172.31.29.77");
     sprintf(assign_priv_ipaddr_stmt, "aws ec2 assign-private-ip-addresses"
             " --no-allow-reassignment"
             " --network-interface-id %s"
             " --private-ip-addresses %s", out_line, priv_ip);
 
+    fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", assign_priv_ipaddr_stmt, errno);
+
     if(shell_command(assign_priv_ipaddr_stmt)){
-        fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", errno);
-        exit(1);
+        fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", assign_priv_ipaddr_stmt, errno);
     }
 
     if(associate_priv_ip_with_eip(priv_ip, out_line, eip) == FAILURE){
@@ -161,6 +167,27 @@ unassign_eip(char *my_net_if_id, char *eip){
         return FAILURE;
 
     return SUCCESS;
+}
+
+int
+print_all_private_ip_in_subnet(){
+    char desc_net_if_stmt[1024];
+    char out_line[256];
+    FILE *fp;
+
+    sprintf(desc_net_if_stmt, "aws ec2 describe-network-interfaces"
+            " --query NetworkInterfaces[*].PrivateIpAddresses[*]."
+            "{A:PrivateIpAddress}");
+
+    fp = shell_command_as_pipe(desc_net_if_stmt);
+    if(fp == NULL)
+        return -1;
+
+    while (fgets(out_line, sizeof(out_line), fp) != NULL) {
+        printf("%s", out_line);
+    }
+
+    pclose(fp);
 }
 
 int
