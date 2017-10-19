@@ -25,6 +25,17 @@ int main(int argc, char const *argv[])
     char vip[IP_LEN];
     char netmask[IP_LEN];
     char broadcast[IP_LEN];
+
+    char    out_line[1024];
+    char    desc_net_if_stmt[1024];
+    char    assign_priv_ipaddr_stmt[1024];
+    char    priv_ip[128];
+    char    eip[128];
+
+    FILE *testfp;
+
+    strcpy(eip, "13.115.176.52");
+
     memset(device, 0, sizeof(device));
     memset(vip, 0, sizeof(vip));
     memset(netmask, 0, sizeof(netmask));
@@ -32,7 +43,7 @@ int main(int argc, char const *argv[])
 
     strcpy(device, "eth0");
     strcpy(vip, "192.1.13.193");
-    // 192.1.13.193 ohhyun
+    // 192.1.13.193 ohhyun 
     // 192.1.13.214 juhyun
     strcpy(netmask, "255.255.0.0");
     strcpy(broadcast, "192.1.255.255");
@@ -41,7 +52,56 @@ int main(int argc, char const *argv[])
 
     printf("vip test started.\n");
 
-    tbcm_vip_init(device, vip, netmask, broadcast);
+    get_user_input("type something.");
+
+//    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
+//        printf("ERROR at shell_command");
+
+    if(shell_command_as_pipe_get_singleline(out_line, "ec2-metadata -o|awk '{print $2;}'")){
+        exit(1);
+    }
+
+    printf("my primary private ip: %s\n", out_line);
+
+    get_user_input("type anything to alias ip");
+
+    sprintf(desc_net_if_stmt, "aws ec2 describe-network-interfaces"
+            " --query 'NetworkInterfaces[?PrivateIpAddress=="
+            "`%s`].NetworkInterfaceId'", out_line);
+
+    if(shell_command_as_pipe_get_singleline(out_line, desc_net_if_stmt)){
+        exit(1);
+    }
+
+    printf("net if id: [%s]\n", out_line);
+
+    print_all_private_ip_in_subnet();
+
+    strcpy(priv_ip, "172.31.29.77");
+    sprintf(assign_priv_ipaddr_stmt, "aws ec2 assign-private-ip-addresses"
+            " --no-allow-reassignment"
+            " --network-interface-id %s"
+            " --private-ip-addresses %s", out_line, priv_ip);
+
+    fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", assign_priv_ipaddr_stmt, errno);
+
+    if(shell_command(assign_priv_ipaddr_stmt)){
+        fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", assign_priv_ipaddr_stmt, errno);
+    }
+
+    if(associate_priv_ip_with_eip(priv_ip, out_line, eip) == FAILURE){
+        fprintf(stderr, "aws associate-address FAIL. errno=%d\n", errno);
+        exit(1);
+    }
+
+    get_user_input("type anything to release vip");
+
+//    if(unassign_eip(out_line, eip)){
+//        fprintf(stderr, "aws unassign-private-ip-addresses FAIL. errno=%d\n", errno);
+//        exit(1);
+//    }
+
+    /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
 
     get_user_input("type anything to alias ip");
@@ -52,10 +112,82 @@ int main(int argc, char const *argv[])
 
     tbcm_vip_release(vip, false);
 
-    get_user_input("type anything to end this test");
+    get_user_input("type anything to end this test");*/
 
     printf("\nvip test ended\n");
     return 0;
+}
+
+int
+associate_priv_ip_with_eip(char *priv_ip, char *my_net_if_id,char *eip){
+    /* to get allocation id of eip (eipalloc-??) */
+    char    desc_addresses_stmt[1024];
+    char    associate_addr_stmt[1024];
+    char    out_line[1024];
+
+    sprintf(desc_addresses_stmt, "aws ec2 describe-addresses"
+            " --query 'Addresses[?PublicIp==`%s`].AllocationId'", eip);
+
+    if(shell_command_as_pipe_get_singleline(out_line, desc_addresses_stmt))
+        return FAILURE;
+
+    printf("eipalloc id: [%s] \n", out_line);
+
+    sprintf(associate_addr_stmt, "aws ec2 associate-address --allocation-id"
+            " %s --network-interface-id %s --private-ip-address %s", out_line, my_net_if_id, priv_ip);
+
+    if(shell_command_as_pipe_get_singleline(out_line, associate_addr_stmt))
+        return FAILURE;
+
+    printf("assoc id: [%s] \n", out_line);
+
+    return SUCCESS;
+}
+
+int
+unassign_eip(char *my_net_if_id, char *eip){
+    /* to get allocation id of eip (eipalloc-??) */
+    char    desc_addresses_stmt[1024];
+    char    unassign_priv_ipaddr_stmt[1024];
+    char    out_line[1024];
+
+    sprintf(desc_addresses_stmt, "aws ec2 describe-addresses"
+            " --query 'Addresses[?PublicIp==`%s`].PrivateIpAddress'", eip);
+
+    if(shell_command_as_pipe_get_singleline(out_line, desc_addresses_stmt))
+        return FAILURE;
+
+    printf("private ip: [%s] \n", out_line);
+
+    sprintf(unassign_priv_ipaddr_stmt, "aws ec2 unassign-private-ip-addresses"
+            " --network-interface-id %s --private-ip-addresses %s"
+            , my_net_if_id, out_line);
+
+    if(shell_command(unassign_priv_ipaddr_stmt))
+        return FAILURE;
+
+    return SUCCESS;
+}
+
+int
+print_all_private_ip_in_subnet(){
+    char desc_net_if_stmt[1024];
+    char out_line[256];
+    FILE *fp;
+
+    sprintf(desc_net_if_stmt, "aws ec2 describe-network-interfaces"
+            " --query NetworkInterfaces[*].PrivateIpAddresses[*]."
+            "{A:PrivateIpAddress}");
+
+    fp = shell_command_as_pipe(desc_net_if_stmt);
+    if(fp == NULL)
+        return -1;
+
+    while (fgets(out_line, sizeof(out_line), fp) != NULL) {
+        printf("%s", out_line);
+    }
+
+    pclose(fp);
 }
 
 int

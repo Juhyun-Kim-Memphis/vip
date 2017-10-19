@@ -71,6 +71,8 @@ int send_arp(libnet_t *l, u_long ip, u_char macaddr[6], u_short arptype);
 
 char *iptos(uint32_t in);
 int shell_command(const char *fmt, ...);
+FILE *shell_command_as_pipe(const char *fmt, ...);
+int shell_command_as_pipe_get_singleline(char *out, const char *fmt, ...);
 char * macaddr2str(const u_char *macaddr, char *str);
 void print_vip_info(tbcm_vip_t *vip_info);
 void get_user_input(char *prompt_message);
