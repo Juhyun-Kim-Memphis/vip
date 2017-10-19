@@ -156,7 +156,7 @@ unassign_eip(char *my_net_if_id, char *eip){
             " --network-interface-id %s --private-ip-addresses %s"
             , my_net_if_id, out_line);
 
-    if(shell_command(out_line, unassign_priv_ipaddr_stmt))
+    if(shell_command(unassign_priv_ipaddr_stmt))
         return FAILURE;
 
     return SUCCESS;
