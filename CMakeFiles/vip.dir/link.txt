@@ -1,1 +1,0 @@
-/usr/bin/cc      CMakeFiles/vip.dir/main.o CMakeFiles/vip.dir/util.o CMakeFiles/vip.dir/tbmsg.o  -o vip -rdynamic libnet.a 
