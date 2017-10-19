@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+cmake_minimum_required(VERSION 2.2)
+=======
 cmake_minimum_required(VERSION 2.8)
+>>>>>>> 36cbc22820b101b6f0055af6b8e21f2162256c1d
 project(vip)
 
 set(CMAKE_C_STANDARD 99)
