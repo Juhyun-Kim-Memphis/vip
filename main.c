@@ -28,6 +28,7 @@ int main(int argc, char const *argv[])
 
     char    out_line[1024];
     char    desc_net_if_stmt[1024];
+    char    assign_priv_ipaddr_stmt[1024];
 
     memset(device, 0, sizeof(device));
     memset(vip, 0, sizeof(vip));
@@ -69,6 +70,14 @@ int main(int argc, char const *argv[])
     }
 
     printf("Single line: %s", out_line);
+
+    sprintf(assign_priv_ipaddr_stmt, "aws ec2 assign-private-ip-addresses"
+            " --network-interface-id %s"
+            "--private-ip-addresses %s", out_line, "172.31.29.77");
+
+    if(shell_command(assign_priv_ipaddr_stmt))
+        exit(1);
+
 
     /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
