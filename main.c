@@ -64,7 +64,7 @@ int main(int argc, char const *argv[])
 
     printf("\n%s\n", desc_net_if_stmt);
 
-    if(shell_command_as_pipe_get_singleline(out_line, "%s", desc_net_if_stmt)){
+    if(shell_command_as_pipe_get_singleline(out_line, desc_net_if_stmt)){
         exit(1);
     }
 
