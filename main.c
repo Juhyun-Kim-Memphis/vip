@@ -73,10 +73,13 @@ int main(int argc, char const *argv[])
 
     sprintf(assign_priv_ipaddr_stmt, "aws ec2 assign-private-ip-addresses"
             " --network-interface-id %s"
-            "--private-ip-addresses %s", out_line, "172.31.29.77");
+            " --private-ip-addresses %s", out_line, "172.31.29.77");
 
-    if(shell_command(assign_priv_ipaddr_stmt))
+    if(shell_command(assign_priv_ipaddr_stmt)){
+        fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", errno);
         exit(1);
+    }
+
 
 
     /*tbcm_vip_init(device, vip, netmask, broadcast);
