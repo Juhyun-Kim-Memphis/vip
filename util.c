@@ -330,6 +330,7 @@ int shell_command_as_pipe_get_singleline(char *out, const char *fmt, ...){
     FILE *fp;
     int num_line = 0;
     char   out_line[1024];
+    char *pos;
     va_list ap;
     va_start(ap, fmt);
 
@@ -344,6 +345,10 @@ int shell_command_as_pipe_get_singleline(char *out, const char *fmt, ...){
         va_end(ap);
         return -1;
     }
+
+    /* remove newline charactor at the end */
+    if ((pos=strchr(out_line, '\n')) != NULL)
+        *pos = '\0';
 
     num_line++;
     strcpy(out, out_line);
