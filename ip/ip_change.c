@@ -13,20 +13,18 @@
 #include <time.h>
 /*---------------------------------------------------------------- Headers }}}*/
 
-#define MAX_ADDR_LEN 100
-#define IP_length 4
-#define MAX 256
+#define NUM_OF_IP_SLOT 4
+#define RAND_MAX_IP_SLOT 256
 
 void copy_array();
 
 int main()
 {
+    char primary_priv_ip[128] = "172.32.29.200";
+    int m_ipAddr[NUM_OF_IP_SLOT];
 
-    char o_ip[MAX_ADDR_LEN] = "172.32.29.200";
-    int m_ipAddr[IP_length];
-
-    int i_ip[IP_length] = {172,32,29,0};
-    int temp_ip[IP_length];
+    int i_ip[NUM_OF_IP_SLOT] = {172,32,29,0};
+    int temp_ip[NUM_OF_IP_SLOT];
 
     char *p;
     int i = 0;
@@ -37,39 +35,22 @@ int main()
 
     srand((unsigned int)time(NULL));
 
-    p = strtok(o_ip,".");
+    p = strtok(primary_priv_ip,".");
     m_ipAddr[i]=atoi(p);
 
     while(p!=NULL)
     {
-
         m_ipAddr[i]=atoi(p);
         i++;
-
         p = strtok(NULL,".");
-
-
     }
 
-    printf("original ip is : %d\n",m_ipAddr[0]);
-    printf("original ip is : %d\n",m_ipAddr[1]);
-    printf("original ip is : %d\n",m_ipAddr[2]);
-    printf("original ip is : %d\n",m_ipAddr[3]);
-
-
-    copy_array(m_ipAddr,i_ip,IP_length);
+    copy_array(m_ipAddr,i_ip,NUM_OF_IP_SLOT);
     i_ip[3] = 0;
-
-    // working on & bit
-    for (cnt=0;cnt<=3;cnt++)
-    {
-        printf("Check i_ip // result is : %d\n",i_ip[cnt]);
-    }
-
 
     while(1)
     {
-        rand_v = rand()%MAX;
+        rand_v = rand()%RAND_MAX_IP_SLOT;
 
         printf("rand_v : %d\n",rand_v);
 
@@ -78,17 +59,9 @@ int main()
     }
     // private ip address가 여러개일 가능성...
 
-    copy_array(i_ip,temp_ip,IP_length);
     temp_ip[3] = rand_v;
 
-    // working on AND
-    for (cnt=0;cnt<=3;cnt++)
-    {
-        printf("Check temp_ip // result is : %d\n" ,temp_ip[cnt]);
-    }
-
-    result[0] = '\0';
-
+//    result[0] = '\0';
     sprintf(result,"%d.%d.%d.%d",temp_ip[0],temp_ip[1],temp_ip[2],temp_ip[3]);
 
     printf("Changed Ip is : %s\n",result);
@@ -99,9 +72,7 @@ void copy_array(int from[], int to[], int n)
 {
     int i = 0;
     for (i=0; i<n; i++)
-    {
         to[i] = from[i];
-    };
 }
 
 

@@ -1,8 +1,12 @@
+#include <time.h>
 #include "util.h"
 
 #define VIP_IDX_MAP_SIZE    VIP_ALIAS_MAX
 #define VIP_ARP_COUNT           5
 #define VIP_ARP_INTERVAL        400000  /* micro-seconds */
+
+#define NUM_OF_IP_SLOT 4
+#define RAND_MAX_IP_SLOT 256
 
 int tbcm_vip_init(char *device, char *vip_str, char *netmask_str, char *broadcast_str);
 int tbcm_vip_alias(char *vip_str);
@@ -63,6 +67,11 @@ int main(int argc, char const *argv[])
 
     printf("my primary private ip: %s\n", out_line);
 
+    if(issue_new_priv_ip(out_line, priv_ip)){
+        fprintf(stderr, "aws issue_new_priv_ip FAIL. errno=%d\n", errno);
+        exit(1);
+    }
+
     get_user_input("type anything to alias ip");
 
     sprintf(desc_net_if_stmt, "aws ec2 describe-network-interfaces"
@@ -75,9 +84,6 @@ int main(int argc, char const *argv[])
 
     printf("net if id: [%s]\n", out_line);
 
-    print_all_private_ip_in_subnet();
-
-    strcpy(priv_ip, "172.31.29.77");
     sprintf(assign_priv_ipaddr_stmt, "aws ec2 assign-private-ip-addresses"
             " --no-allow-reassignment"
             " --network-interface-id %s"
@@ -94,10 +100,12 @@ int main(int argc, char const *argv[])
 
     get_user_input("type anything to release vip");
 
-//    if(unassign_eip(out_line, eip)){
-//        fprintf(stderr, "aws unassign-private-ip-addresses FAIL. errno=%d\n", errno);
-//        exit(1);
-//    }
+    if(unassign_eip(out_line, eip)){
+        fprintf(stderr, "aws unassign-private-ip-addresses FAIL. errno=%d\n", errno);
+        exit(1);
+    }
+
+    get_user_input("type anything to quit");
 
     /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
@@ -168,7 +176,7 @@ unassign_eip(char *my_net_if_id, char *eip){
 }
 
 int
-print_all_private_ip_in_subnet(){
+exists_matching_private_ip_in_subnet(int in){
     char desc_net_if_stmt[1024];
     char out_line[256];
     FILE *fp;
@@ -182,11 +190,68 @@ print_all_private_ip_in_subnet(){
         return -1;
 
     while (fgets(out_line, sizeof(out_line), fp) != NULL) {
-        printf("%s", out_line);
+        char *p;
+        int i = 0;
+        int ipaddr_slot[NUM_OF_IP_SLOT];
+
+        p = strtok(out_line,".");
+        ipaddr_slot[i]=atoi(p);
+
+        while(p!=NULL) {
+            ipaddr_slot[i]=atoi(p);
+            i++;
+            p = strtok(NULL,".");
+        }
+
+        if(ipaddr_slot[3] == in) {
+            pclose(fp);
+            return 1; /* found matching addr */
+        }
     }
 
+    return 0;
     pclose(fp);
 }
+
+int
+issue_new_priv_ip(char *primary_priv_ip, char *out_priv_ip){
+    char *p;
+    int i = 0;
+    int m_ipAddr[NUM_OF_IP_SLOT];
+    int rand_v;
+
+    srand((unsigned int)time(NULL));
+
+    p = strtok(primary_priv_ip,".");
+    m_ipAddr[i]=atoi(p);
+
+    while(p!=NULL) {
+        m_ipAddr[i]=atoi(p);
+        i++;
+        p = strtok(NULL,".");
+    }
+
+    while(1) {
+        int is_already_exist = 1;
+        rand_v = rand()%RAND_MAX_IP_SLOT;
+
+        printf("rand_v : %d\n",rand_v);
+
+        is_already_exist = exists_matching_private_ip_in_subnet(rand_v);
+        if(is_already_exist == 0)
+            break;
+        if(is_already_exist == -1) { // popen fails
+            fprintf(stderr, "exists_matching_private_ip. FAIL. errno=%d\n", errno);
+            return FAILURE;
+        }
+    }
+
+    m_ipAddr[3] = rand_v;
+    sprintf(out_priv_ip,"%d.%d.%d.%d",m_ipAddr[0],m_ipAddr[1],m_ipAddr[2],m_ipAddr[3]);
+    return SUCCESS;
+}
+
+
 
 int
 tbcm_vip_init( char *device, char *vip_str,
