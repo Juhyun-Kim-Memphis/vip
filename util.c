@@ -331,7 +331,12 @@ char *macaddr2str(const u_char *macaddr, char *str) {
     return str;
 }
 
+
+
 void print_vip_info(tbcm_vip_t *v) {
+
+    int i;
+
     printf("\n\nprint_vip_info result!!\n");
     printf("flag_init: %d\n", v->flag_init);
     printf("dev_pub: %s\n", v->dev_pub);
@@ -341,7 +346,8 @@ void print_vip_info(tbcm_vip_t *v) {
     printf("broadcast: %d\n", v->broadcast);
 
     printf("vips: ");
-    for (int i = 0; i < VIP_ALIAS_MAX; ++i)
+
+    for (i = 0; i < VIP_ALIAS_MAX; ++i)
     {
         printf("%d, ", v->vips[i]);
     }

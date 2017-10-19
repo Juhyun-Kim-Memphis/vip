@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 2.2)
 project(vip)
 
 set(CMAKE_C_STANDARD 99)
