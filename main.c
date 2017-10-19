@@ -218,11 +218,14 @@ issue_new_priv_ip(char *primary_priv_ip, char *out_priv_ip){
     char *p;
     int i = 0;
     int m_ipAddr[NUM_OF_IP_SLOT];
+    char temp_ip[128];
     int rand_v;
+
+    strcpy(temp_ip, primary_priv_ip);
 
     srand((unsigned int)time(NULL));
 
-    p = strtok(primary_priv_ip,".");
+    p = strtok(temp_ip,".");
     m_ipAddr[i]=atoi(p);
 
     while(p!=NULL) {
@@ -250,8 +253,6 @@ issue_new_priv_ip(char *primary_priv_ip, char *out_priv_ip){
     sprintf(out_priv_ip,"%d.%d.%d.%d",m_ipAddr[0],m_ipAddr[1],m_ipAddr[2],m_ipAddr[3]);
     return SUCCESS;
 }
-
-
 
 int
 tbcm_vip_init( char *device, char *vip_str,
