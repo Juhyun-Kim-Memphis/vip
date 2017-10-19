@@ -74,6 +74,7 @@ int main(int argc, char const *argv[])
     printf("net if id: [%s]\n", out_line);
 
     sprintf(assign_priv_ipaddr_stmt, "aws ec2 assign-private-ip-addresses"
+            " --no-allow-reassignment"
             " --network-interface-id %s"
             " --private-ip-addresses %s", out_line, priv_ip);
 
@@ -89,10 +90,10 @@ int main(int argc, char const *argv[])
 
     get_user_input("type anything to release vip");
 
-    if(unassign_eip(out_line, eip)){
-        fprintf(stderr, "aws unassign-private-ip-addresses FAIL. errno=%d\n", errno);
-        exit(1);
-    }
+//    if(unassign_eip(out_line, eip)){
+//        fprintf(stderr, "aws unassign-private-ip-addresses FAIL. errno=%d\n", errno);
+//        exit(1);
+//    }
 
     /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
