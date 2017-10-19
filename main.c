@@ -50,7 +50,7 @@ int main(int argc, char const *argv[])
 //    if(shell_command("aws ec2 assign-private-ip-addresses --network-interface-id eni-00175a3d --private-ip-addresses 172.31.26.207"))
 //        printf("ERROR at shell_command");
 
-    if(shell_command_as_pipe_get_singleline(out_line, "ls")){
+    if(shell_command_as_pipe_get_singleline(out_line, "ec2-metadata -o|awk '{print $2;}'")){
         exit(1);
     }
 
@@ -61,6 +61,14 @@ int main(int argc, char const *argv[])
     sprintf(desc_net_if_stmt, "aws ec2 describe-network-interfaces"
             " --query 'NetworkInterfaces[?PrivateIpAddress=="
             "`%s`].NetworkInterfaceId'", out_line);
+
+    printf("\n%s\n", desc_net_if_stmt);
+
+    if(shell_command_as_pipe_get_singleline(out_line, "%s", desc_net_if_stmt)){
+        exit(1);
+    }
+
+    printf("Single line: %s", out_line);
 
     /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
