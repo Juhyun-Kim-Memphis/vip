@@ -83,8 +83,6 @@ int main(int argc, char const *argv[])
             " --network-interface-id %s"
             " --private-ip-addresses %s", out_line, priv_ip);
 
-    fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", assign_priv_ipaddr_stmt, errno);
-
     if(shell_command(assign_priv_ipaddr_stmt)){
         fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", assign_priv_ipaddr_stmt, errno);
     }
