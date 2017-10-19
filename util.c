@@ -326,6 +326,44 @@ FILE *shell_command_as_pipe(const char *fmt, ...){
     return fp;
 }
 
+int shell_command_as_pipe_get_singleline(char *out, const char *fmt, ...){
+    FILE *fp;
+    int num_line = 0;
+    char   out_line[1024];
+    va_list ap;
+    va_start(ap, fmt);
+
+    fp = shell_command_as_pipe(fmt, ap);
+    if(fp == NULL){
+        va_end(ap);
+        return -1;
+    }
+
+    if(fgets(out_line, sizeof(out_line), fp) == NULL){
+        fprintf(stderr, "shell_command_as_pipe_get_singleline() fgets fails to get single line. errno=%d\n", errno);
+        va_end(ap);
+        return -1;
+    }
+
+    num_line++;
+    strcpy(out, out_line);
+
+    /* parse */
+    while (fgets(out_line, sizeof(out_line), fp) != NULL) {
+        num_line++;
+    }
+
+    if(num_line > 1){
+        fprintf(stderr, "shell_command_as_pipe_get_singleline() return multiple line. \n");
+        return -1;
+    }
+
+    pclose(fp);
+    va_end(ap);
+    return 0;
+}
+
+
 /* from tcptraceroute */
 #define IPTOSBUFFERS    12
 
