@@ -84,8 +84,11 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-    if(associate_priv_ip_with_eip(priv_ip, eip) == SUCCESS)
-        
+    if(associate_priv_ip_with_eip(priv_ip, out_line, eip) == FAILURE)
+        exit(1);
+
+
+
     /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
 
@@ -104,9 +107,10 @@ int main(int argc, char const *argv[])
 }
 
 int
-associate_priv_ip_with_eip(char *priv_ip, char *eip){
+associate_priv_ip_with_eip(char *priv_ip, char *net_if_id,char *eip){
     /* to get allocation id of eip (eipalloc-??) */
     char    desc_addresses_stmt[1024];
+    char    associate_addr_stmt[1024];
     char    out_line[1024];
 
     sprintf(desc_addresses_stmt, "aws ec2 describe-addresses"
@@ -116,6 +120,16 @@ associate_priv_ip_with_eip(char *priv_ip, char *eip){
         exit(1);
 
     printf("eipalloc id: %s", out_line);
+
+    sprintf(desc_addresses_stmt, "aws ec2 associate-address --allocation-id"
+            " %s --network-interface-id %s --private-ip-address %s", out_line, net_if_id, priv_ip);
+
+    if(shell_command_as_pipe_get_singleline(out_line, desc_addresses_stmt))
+        exit(1);
+
+    printf("assoc id: %s", out_line);
+
+
 
     return SUCCESS;
 }
