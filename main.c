@@ -29,6 +29,10 @@ int main(int argc, char const *argv[])
     char    out_line[1024];
     char    desc_net_if_stmt[1024];
     char    assign_priv_ipaddr_stmt[1024];
+    char    priv_ip[128];
+    char    eip[128];
+    strcpy(priv_ip, "172.31.29.77");
+    strcpy(eip, "13.115.176.52");
 
     memset(device, 0, sizeof(device));
     memset(vip, 0, sizeof(vip));
@@ -73,15 +77,15 @@ int main(int argc, char const *argv[])
 
     sprintf(assign_priv_ipaddr_stmt, "aws ec2 assign-private-ip-addresses"
             " --network-interface-id %s"
-            " --private-ip-addresses %s", out_line, "172.31.29.77");
+            " --private-ip-addresses %s", out_line, priv_ip);
 
     if(shell_command(assign_priv_ipaddr_stmt)){
         fprintf(stderr, "executing \"%s\" FAIL. errno=%d\n", errno);
         exit(1);
     }
 
-
-
+    if(associate_priv_ip_with_eip(priv_ip, eip) == SUCCESS)
+        
     /*tbcm_vip_init(device, vip, netmask, broadcast);
     print_vip_info(&vip_info);
 
@@ -97,6 +101,23 @@ int main(int argc, char const *argv[])
 
     printf("\nvip test ended\n");
     return 0;
+}
+
+int
+associate_priv_ip_with_eip(char *priv_ip, char *eip){
+    /* to get allocation id of eip (eipalloc-??) */
+    char    desc_addresses_stmt[1024];
+    char    out_line[1024];
+
+    sprintf(desc_addresses_stmt, "aws ec2 describe-addresses"
+            " --query 'Addresses[?PublicIp==`%s`].AllocationId'", eip);
+
+    if(shell_command_as_pipe_get_singleline(out_line, desc_addresses_stmt))
+        exit(1);
+
+    printf("eipalloc id: %s", out_line);
+
+    return SUCCESS;
 }
 
 int
